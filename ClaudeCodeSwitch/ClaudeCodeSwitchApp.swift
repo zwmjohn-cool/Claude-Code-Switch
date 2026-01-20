@@ -2,8 +2,6 @@
 //  ClaudeCodeSwitchApp.swift
 //  ClaudeCodeSwitch
 //
-//  Created by zwm on 1/20/26.
-//
 
 import SwiftUI
 
@@ -13,5 +11,8 @@ struct ClaudeCodeSwitchApp: App {
         WindowGroup {
             ContentView()
         }
+        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentSize)
+        .defaultSize(width: 550, height: 500)
     }
 }
