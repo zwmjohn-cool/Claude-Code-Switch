@@ -7,13 +7,23 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var manager = SettingsManager()
+    @StateObject private var localization = LocalizationManager.shared
     @State private var showingAddSheet = false
+    @State private var showingSettingsSheet = false
     @State private var editingPreset: EnvPreset?
+
+    private var l10n: L10n {
+        L10n(language: localization.currentLanguage)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             // Header
-            HeaderView(showingAddSheet: $showingAddSheet)
+            HeaderView(
+                showingAddSheet: $showingAddSheet,
+                showingSettingsSheet: $showingSettingsSheet,
+                l10n: l10n
+            )
 
             Divider()
                 .background(Color.gray.opacity(0.3))
@@ -24,6 +34,7 @@ struct ContentView: View {
                     ForEach(manager.presets) { preset in
                         PresetRow(
                             preset: preset,
+                            l10n: l10n,
                             onActivate: {
                                 manager.activatePreset(preset)
                             },
@@ -52,25 +63,38 @@ struct ContentView: View {
         .frame(minWidth: 600, minHeight: 450)
         .background(Color(NSColor.windowBackgroundColor))
         .sheet(isPresented: $showingAddSheet) {
-            AddPresetView(manager: manager)
+            AddPresetView(manager: manager, l10n: l10n)
         }
         .sheet(item: $editingPreset) { preset in
-            EditPresetView(manager: manager, preset: preset)
+            EditPresetView(manager: manager, preset: preset, l10n: l10n)
+        }
+        .sheet(isPresented: $showingSettingsSheet) {
+            SettingsView(l10n: l10n)
         }
     }
 }
 
 struct HeaderView: View {
     @Binding var showingAddSheet: Bool
+    @Binding var showingSettingsSheet: Bool
+    let l10n: L10n
 
     var body: some View {
         HStack {
-            Text("Claude Code Switch")
+            Text(l10n.appTitle)
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundColor(.blue)
 
             Spacer()
+
+            Button(action: { showingSettingsSheet = true }) {
+                Image(systemName: "gearshape.fill")
+                    .font(.title3)
+                    .foregroundColor(.gray)
+            }
+            .buttonStyle(.plain)
+            .help(l10n.settingsTooltip)
 
             Button(action: { showingAddSheet = true }) {
                 Image(systemName: "plus.circle.fill")
@@ -78,7 +102,7 @@ struct HeaderView: View {
                     .foregroundColor(.orange)
             }
             .buttonStyle(.plain)
-            .help("Add new preset")
+            .help(l10n.addNewPresetTooltip)
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
@@ -87,6 +111,7 @@ struct HeaderView: View {
 
 struct PresetRow: View {
     let preset: EnvPreset
+    let l10n: L10n
     let onActivate: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
@@ -112,7 +137,7 @@ struct PresetRow: View {
                         .foregroundColor(.primary)
 
                     if preset.isActive {
-                        Text("当前使用")
+                        Text(l10n.currentlyUsing)
                             .font(.caption)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 2)
@@ -132,11 +157,11 @@ struct PresetRow: View {
             // Action buttons
             HStack(spacing: 8) {
                 if preset.isActive {
-                    // 使用中 button (disabled state)
+                    // In Use button (disabled state)
                     HStack(spacing: 4) {
                         Image(systemName: "checkmark")
                             .font(.caption)
-                        Text("使用中")
+                        Text(l10n.inUse)
                             .font(.callout)
                     }
                     .padding(.horizontal, 12)
@@ -145,12 +170,12 @@ struct PresetRow: View {
                     .foregroundColor(.secondary)
                     .cornerRadius(6)
                 } else {
-                    // 启用 button
+                    // Enable button
                     Button(action: onActivate) {
                         HStack(spacing: 4) {
                             Image(systemName: "play.fill")
                                 .font(.caption)
-                            Text("启用")
+                            Text(l10n.enable)
                                 .font(.callout)
                         }
                         .padding(.horizontal, 12)
@@ -169,7 +194,7 @@ struct PresetRow: View {
                         .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.plain)
-                .help("Edit")
+                .help(l10n.edit)
 
                 Button(action: onDelete) {
                     Image(systemName: "trash")
@@ -178,7 +203,7 @@ struct PresetRow: View {
                         .frame(width: 28, height: 28)
                 }
                 .buttonStyle(.plain)
-                .help("Delete")
+                .help(l10n.delete)
             }
         }
         .padding(16)
@@ -195,6 +220,7 @@ struct PresetRow: View {
 
 struct AddPresetView: View {
     @ObservedObject var manager: SettingsManager
+    let l10n: L10n
     @Environment(\.dismiss) private var dismiss
 
     @State private var name = ""
@@ -203,19 +229,19 @@ struct AddPresetView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            Text("Add New Preset")
+            Text(l10n.addNewPreset)
                 .font(.title2)
                 .fontWeight(.bold)
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Name")
+                Text(l10n.name)
                     .font(.headline)
-                TextField("Enter preset name", text: $name)
+                TextField(l10n.enterPresetName, text: $name)
                     .textFieldStyle(.roundedBorder)
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("ENV (JSON)")
+                Text(l10n.envJson)
                     .font(.headline)
 
                 TextEditor(text: $envJson)
@@ -234,14 +260,14 @@ struct AddPresetView: View {
             }
 
             HStack {
-                Button("Cancel") {
+                Button(l10n.cancel) {
                     dismiss()
                 }
                 .keyboardShortcut(.escape)
 
                 Spacer()
 
-                Button("Add") {
+                Button(l10n.add) {
                     if let env = parseEnvJson(envJson) {
                         let preset = EnvPreset(name: name, env: env)
                         manager.addPreset(preset)
@@ -285,6 +311,7 @@ struct AddPresetView: View {
 struct EditPresetView: View {
     @ObservedObject var manager: SettingsManager
     let preset: EnvPreset
+    let l10n: L10n
     @Environment(\.dismiss) private var dismiss
 
     @State private var name: String = ""
@@ -293,19 +320,19 @@ struct EditPresetView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            Text("Edit Preset")
+            Text(l10n.editPreset)
                 .font(.title2)
                 .fontWeight(.bold)
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Name")
+                Text(l10n.name)
                     .font(.headline)
-                TextField("Enter preset name", text: $name)
+                TextField(l10n.enterPresetName, text: $name)
                     .textFieldStyle(.roundedBorder)
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("ENV (JSON)")
+                Text(l10n.envJson)
                     .font(.headline)
 
                 TextEditor(text: $envJson)
@@ -324,14 +351,14 @@ struct EditPresetView: View {
             }
 
             HStack {
-                Button("Cancel") {
+                Button(l10n.cancel) {
                     dismiss()
                 }
                 .keyboardShortcut(.escape)
 
                 Spacer()
 
-                Button("Save") {
+                Button(l10n.save) {
                     if let env = parseEnvJson(envJson) {
                         var updated = preset
                         updated.name = name
@@ -370,6 +397,46 @@ struct EditPresetView: View {
             parseError = "JSON parse error: \(error.localizedDescription)"
             return nil
         }
+    }
+}
+
+struct SettingsView: View {
+    @ObservedObject private var localization = LocalizationManager.shared
+    let l10n: L10n
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text(l10n.settings)
+                .font(.title2)
+                .fontWeight(.bold)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(l10n.language_)
+                    .font(.headline)
+
+                Picker("", selection: $localization.currentLanguage) {
+                    ForEach(AppLanguage.allCases, id: \.self) { language in
+                        Text(language.displayName).tag(language)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 200)
+            }
+
+            Spacer()
+
+            HStack {
+                Spacer()
+                Button(l10n.done) {
+                    dismiss()
+                }
+                .keyboardShortcut(.return)
+                .buttonStyle(.borderedProminent)
+            }
+        }
+        .padding(24)
+        .frame(width: 300, height: 180)
     }
 }
 

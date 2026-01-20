@@ -10,6 +10,7 @@ A macOS utility to quickly switch between different API environment configuratio
 - **One-Click Switch** - Instantly activate any preset to switch API environments
 - **JSON Editor** - Edit env configurations directly with a built-in JSON text editor
 - **Auto-Load Default** - Automatically loads your current env as the default preset on first launch
+- **Multi-Language Support** - English and Chinese (中文) with automatic system language detection
 - **Native macOS App** - Built with SwiftUI for a seamless macOS experience
 
 ## Installation
